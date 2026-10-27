@@ -3,7 +3,7 @@
 Portal berita dengan panel redaksi. Pembaca membuka berita per kategori, mencari artikel, berkomentar, ikut jajak pendapat, melihat agenda, galeri foto, dan video, lalu mengirim pesan ke redaksi.
 Redaksi menulis dan menerbitkan berita dari panel, mengatur menu, iklan, dan tampilan situs, serta membagi hak akses per modul.
 
-Ini adalah rewrite CMS Lokomedia (PHP dan MySQL, data contoh SwaraKalibata) ke Next.js 16, PostgreSQL, Prisma 7, Better Auth, dan shadcn/ui.
+Ini adalah rewrite CMS Lokomedia (PHP dan MySQL) ke Next.js 16, PostgreSQL, Prisma 7, Better Auth, dan shadcn/ui.
 Ke-34 tabel versi lama punya padanan di skema baru, dan isinya bisa dipindahkan dengan `pnpm db:import`.
 
 ## Isi aplikasi
@@ -80,7 +80,7 @@ Akun dicocokkan berdasarkan username. Password lama yang masih berupa hash MD5 t
 Link menu lama seperti `kategori-48-hukum.html` diubah menjadi `/kategori/hukum`.
 
 Baris yang filenya tidak ada di folder lama dilewati dan dicantumkan di akhir output.
-Pada data SwaraKalibata, yang dilewati adalah 5 file download, 3 gambar header, dan 3 gambar banner.
+Pada data, yang dilewati adalah 5 file download, 3 gambar header, dan 3 gambar banner.
 
 ## Akun awal
 
