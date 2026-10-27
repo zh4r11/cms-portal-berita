@@ -1,0 +1,578 @@
+// Skema database CMS Portal Berita.
+// Setiap tabel CMS Lokomedia lama punya padanan di sini (nama tabel tetap,
+// lihat @@map). Kolom `tanggal` + `jam` + `hari` digabung menjadi satu
+// timestamp, enum 'Y'/'N' menjadi boolean, dan kolom `username` menjadi relasi
+// ke User. Model auth (User, Session, Account, Verification) mengikuti Better Auth.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Level {
+  admin
+  user
+}
+
+enum StatusPoling {
+  pertanyaan
+  jawaban
+}
+
+enum StatusModul {
+  admin
+  user
+}
+
+// ---------------------------------------------------------------------------
+// Berita
+// ---------------------------------------------------------------------------
+
+model Kategori {
+  id        Int      @id @default(autoincrement())
+  nama      String   @db.VarChar(50)
+  slug      String   @unique @db.VarChar(100)
+  aktif     Boolean  @default(true)
+  authorId  String?  @map("author_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  author User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  berita Berita[]
+
+  @@map("kategori")
+}
+
+model Berita {
+  id               Int      @id @default(autoincrement())
+  kategoriId       Int?     @map("kategori_id")
+  authorId         String?  @map("author_id")
+  judul            String   @db.VarChar(200)
+  subJudul         String?  @map("sub_judul") @db.VarChar(200)
+  slug             String   @unique @db.VarChar(220)
+  /// ID video YouTube (bukan URL penuh)
+  youtube          String?  @db.VarChar(20)
+  /// Tampil di slider utama beranda
+  headline         Boolean  @default(false)
+  /// Sudah diterbitkan (false = draf)
+  aktif            Boolean  @default(false)
+  /// Masuk daftar "Pilihan Redaksi"
+  utama            Boolean  @default(false)
+  isi              String
+  gambar           String?
+  keteranganGambar String?  @map("keterangan_gambar")
+  dibaca           Int      @default(0)
+  publishedAt      DateTime @default(now()) @map("published_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  kategori Kategori?  @relation(fields: [kategoriId], references: [id], onDelete: SetNull)
+  author   User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  tags     Tag[]
+  komentar Komentar[]
+
+  @@index([aktif, publishedAt])
+  @@index([kategoriId])
+  @@map("berita")
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  nama      String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  berita Berita[]
+
+  @@map("tag")
+}
+
+model Komentar {
+  id        Int      @id @default(autoincrement())
+  beritaId  Int      @map("berita_id")
+  nama      String   @db.VarChar(100)
+  email     String?  @db.VarChar(100)
+  url       String?  @db.VarChar(200)
+  isi       String
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  berita Berita @relation(fields: [beritaId], references: [id], onDelete: Cascade)
+
+  @@index([beritaId])
+  @@map("komentar")
+}
+
+/// Sensor kata pada komentar: `kata` diganti dengan `ganti`.
+model KataJelek {
+  id    Int    @id @default(autoincrement())
+  kata  String @unique @db.VarChar(60)
+  ganti String @db.VarChar(60)
+
+  @@map("katajelek")
+}
+
+// ---------------------------------------------------------------------------
+// Halaman, agenda, foto, video
+// ---------------------------------------------------------------------------
+
+model HalamanStatis {
+  id        Int      @id @default(autoincrement())
+  judul     String   @db.VarChar(150)
+  slug      String   @unique @db.VarChar(170)
+  isi       String
+  gambar    String?
+  dibaca    Int      @default(0)
+  authorId  String?  @map("author_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@map("halamanstatis")
+}
+
+model Agenda {
+  id         Int      @id @default(autoincrement())
+  tema       String   @db.VarChar(150)
+  slug       String   @unique @db.VarChar(170)
+  isi        String
+  tempat     String   @db.VarChar(150)
+  pengirim   String   @db.VarChar(100)
+  gambar     String?
+  tglMulai   DateTime @map("tgl_mulai") @db.Date
+  tglSelesai DateTime @map("tgl_selesai") @db.Date
+  /// Jam acara sebagai teks bebas, mis. "19.00 - selesai"
+  jam        String   @db.VarChar(50)
+  dibaca     Int      @default(0)
+  authorId   String?  @map("author_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([tglMulai])
+  @@map("agenda")
+}
+
+model Album {
+  id         Int      @id @default(autoincrement())
+  judul      String   @db.VarChar(150)
+  slug       String   @unique @db.VarChar(170)
+  keterangan String?
+  gambar     String?
+  aktif      Boolean  @default(true)
+  dilihat    Int      @default(0)
+  authorId   String?  @map("author_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  author User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  galeri Galeri[]
+
+  @@map("album")
+}
+
+model Galeri {
+  id         Int      @id @default(autoincrement())
+  albumId    Int      @map("album_id")
+  judul      String   @db.VarChar(150)
+  keterangan String?
+  gambar     String
+  authorId   String?  @map("author_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  album  Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([albumId])
+  @@map("gallery")
+}
+
+model Playlist {
+  id        Int      @id @default(autoincrement())
+  judul     String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(120)
+  gambar    String?
+  aktif     Boolean  @default(true)
+  authorId  String?  @map("author_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  author User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  video  Video[]
+
+  @@map("playlist")
+}
+
+model Video {
+  id          Int      @id @default(autoincrement())
+  playlistId  Int?     @map("playlist_id")
+  judul       String   @db.VarChar(150)
+  slug        String   @unique @db.VarChar(170)
+  keterangan  String?
+  gambar      String?
+  /// File video yang diunggah (mp4). Kosong bila memakai YouTube.
+  file        String?
+  youtube     String?  @db.VarChar(20)
+  dilihat     Int      @default(0)
+  authorId    String?  @map("author_id")
+  publishedAt DateTime @default(now()) @map("published_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  playlist Playlist?       @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+  author   User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  tags     TagVideo[]
+  komentar KomentarVideo[]
+
+  @@map("video")
+}
+
+model TagVideo {
+  id        Int      @id @default(autoincrement())
+  nama      String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  video Video[]
+
+  @@map("tagvid")
+}
+
+model KomentarVideo {
+  id        Int      @id @default(autoincrement())
+  videoId   Int      @map("video_id")
+  nama      String   @db.VarChar(100)
+  url       String?  @db.VarChar(200)
+  isi       String
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@map("komentarvid")
+}
+
+// ---------------------------------------------------------------------------
+// Interaksi pembaca
+// ---------------------------------------------------------------------------
+
+/// Satu baris berstatus `pertanyaan` dan beberapa baris `jawaban`, seperti tabel lama.
+model Poling {
+  id     Int          @id @default(autoincrement())
+  pilihan String      @db.VarChar(200)
+  status StatusPoling
+  rating Int          @default(0)
+  aktif  Boolean      @default(true)
+
+  @@map("poling")
+}
+
+model Hubungi {
+  id        Int      @id @default(autoincrement())
+  nama      String   @db.VarChar(100)
+  email     String   @db.VarChar(150)
+  subjek    String   @db.VarChar(150)
+  pesan     String
+  dibaca    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("hubungi")
+}
+
+model Download {
+  id        Int      @id @default(autoincrement())
+  judul     String   @db.VarChar(150)
+  namaFile  String   @map("nama_file")
+  hits      Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("download")
+}
+
+/// Kunjungan per IP per hari. `online` = waktu terakhir terlihat.
+model Statistik {
+  id      Int      @id @default(autoincrement())
+  ip      String   @db.VarChar(45)
+  tanggal DateTime @db.Date
+  hits    Int      @default(1)
+  online  DateTime @default(now())
+
+  @@unique([ip, tanggal])
+  @@index([tanggal])
+  @@map("statistik")
+}
+
+model Member {
+  id        Int      @id @default(autoincrement())
+  nama      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  username  String   @unique @db.VarChar(50)
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("member")
+}
+
+// ---------------------------------------------------------------------------
+// Tampilan situs
+// ---------------------------------------------------------------------------
+
+/// Satu baris saja (id = 1).
+model Identitas {
+  id            Int     @id @default(1)
+  namaWebsite   String  @map("nama_website") @db.VarChar(150)
+  email         String? @db.VarChar(150)
+  url           String? @db.VarChar(200)
+  facebook      String? @db.VarChar(200)
+  rekening      String? @db.VarChar(200)
+  noTelp        String? @map("no_telp") @db.VarChar(30)
+  metaDeskripsi String? @map("meta_deskripsi") @db.VarChar(250)
+  metaKeyword   String? @map("meta_keyword") @db.VarChar(250)
+  favicon       String?
+
+  @@map("identitas")
+}
+
+model Menu {
+  id       Int     @id @default(autoincrement())
+  parentId Int?    @map("parent_id")
+  nama     String  @db.VarChar(50)
+  /// Path internal (mis. /kategori/hukum) atau URL penuh. Kosong = hanya pembuka submenu.
+  link     String? @db.VarChar(200)
+  aktif    Boolean @default(true)
+  urutan   Int     @default(0)
+
+  parent   Menu?  @relation("SubMenu", fields: [parentId], references: [id], onDelete: Cascade)
+  children Menu[] @relation("SubMenu")
+
+  @@map("menu")
+}
+
+/// Template = skema warna portal publik (pengganti folder layout/biru, merah, hijau).
+model Template {
+  id      Int     @id @default(autoincrement())
+  judul   String  @db.VarChar(100)
+  pembuat String? @db.VarChar(100)
+  /// Kunci skema warna, lihat TEMA di src/lib/cms.ts
+  folder  String  @db.VarChar(30)
+  aktif   Boolean @default(false)
+
+  @@map("templates")
+}
+
+model Logo {
+  id     Int    @id @default(autoincrement())
+  gambar String
+
+  @@map("logo")
+}
+
+model Background {
+  id     Int    @id @default(autoincrement())
+  gambar String
+
+  @@map("background")
+}
+
+/// Gambar masthead di atas menu.
+model Header {
+  id        Int      @id @default(autoincrement())
+  judul     String   @db.VarChar(150)
+  url       String?  @db.VarChar(200)
+  gambar    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("header")
+}
+
+/// Iklan Utama: daftar tautan bergambar di sidebar.
+model Banner {
+  id        Int      @id @default(autoincrement())
+  judul     String   @db.VarChar(150)
+  url       String?  @db.VarChar(200)
+  gambar    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("banner")
+}
+
+/// Iklan Layanan: di samping masthead.
+model IklanAtas {
+  id        Int      @id @default(autoincrement())
+  judul     String   @db.VarChar(150)
+  url       String?  @db.VarChar(200)
+  gambar    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("iklanatas")
+}
+
+/// Iklan Depan: di tengah beranda.
+model IklanTengah {
+  id        Int      @id @default(autoincrement())
+  judul     String   @db.VarChar(150)
+  url       String?  @db.VarChar(200)
+  gambar    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("iklantengah")
+}
+
+/// Iklan Kiri: di sidebar bawah.
+model PasangIklan {
+  id        Int      @id @default(autoincrement())
+  judul     String   @db.VarChar(150)
+  url       String?  @db.VarChar(200)
+  gambar    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("pasangiklan")
+}
+
+/// Teks berjalan di bawah menu.
+model SekilasInfo {
+  id        Int      @id @default(autoincrement())
+  info      String   @db.VarChar(200)
+  gambar    String?
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("sekilasinfo")
+}
+
+model ModAlamat {
+  id     Int    @id @default(autoincrement())
+  alamat String
+
+  @@map("mod_alamat")
+}
+
+/// Kontak Yahoo! Messenger dari versi lama. Layanannya sudah ditutup,
+/// jadi hanya ditampilkan sebagai teks di halaman Hubungi Kami.
+model ModYm {
+  id       Int    @id @default(autoincrement())
+  nama     String @db.VarChar(100)
+  username String @db.VarChar(50)
+
+  @@map("mod_ym")
+}
+
+// ---------------------------------------------------------------------------
+// Hak akses panel
+// ---------------------------------------------------------------------------
+
+/// Modul panel redaksi. Level admin membuka semua modul; level user hanya
+/// modul aktif yang diberikan lewat UserModul.
+model Modul {
+  id     Int         @id @default(autoincrement())
+  nama   String      @db.VarChar(50)
+  /// Kunci modul, lihat MODUL di src/lib/modul.ts
+  link   String      @unique @db.VarChar(50)
+  status StatusModul @default(user)
+  aktif  Boolean     @default(true)
+  urutan Int         @default(0)
+
+  users UserModul[]
+
+  @@map("modul")
+}
+
+model UserModul {
+  id      Int    @id @default(autoincrement())
+  userId  String @map("user_id")
+  modulId Int    @map("modul_id")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modul Modul @relation(fields: [modulId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, modulId])
+  @@map("users_modul")
+}
+
+// ---------------------------------------------------------------------------
+// Better Auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String   @id
+  name            String
+  username        String   @unique @db.VarChar(30)
+  displayUsername String?  @map("display_username")
+  email           String   @unique
+  emailVerified   Boolean  @default(false) @map("email_verified")
+  image           String?
+  noTelp          String?  @map("no_telp") @db.VarChar(30)
+  level           Level    @default(user)
+  blokir          Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  sessions Session[]
+  accounts Account[]
+  modul    UserModul[]
+  kategori Kategori[]
+  berita   Berita[]
+  halaman  HalamanStatis[]
+  agenda   Agenda[]
+  album    Album[]
+  galeri   Galeri[]
+  playlist Playlist[]
+  video    Video[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime @map("expires_at")
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([identifier])
+  @@map("verifications")
+}
