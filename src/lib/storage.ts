@@ -6,8 +6,28 @@ import path from "node:path";
 /**
  * File unggahan disimpan di luar /public (Next.js tidak menyajikan file
  * yang ditambahkan ke /public setelah build) dan disajikan oleh /media/[folder]/[file].
+ * Bila SUPABASE_URL dan SUPABASE_SECRET_KEY diisi (mis. di Vercel, yang disknya
+ * tidak permanen), file disimpan di bucket Supabase Storage, bukan di folder ini.
  */
 export const STORAGE_DIR = path.join(process.cwd(), "storage");
+
+export const BUCKET = process.env.SUPABASE_BUCKET || "media";
+
+const SUPABASE_URL = process.env.SUPABASE_URL?.replace(/\/$/, "");
+const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY;
+
+export const pakaiSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+function urlObjek(folder: Folder, nama: string, publik = false) {
+  return `${SUPABASE_URL}/storage/v1/object/${publik ? "public/" : ""}${BUCKET}/${folder}/${encodeURIComponent(nama)}`;
+}
+
+const authSupabase = () => ({ apikey: SUPABASE_KEY!, Authorization: `Bearer ${SUPABASE_KEY}` });
+
+/** URL publik file di bucket (dipakai route /media sebagai sumber proxy). */
+export function urlPublikSupabase(folder: Folder, nama: string) {
+  return urlObjek(folder, nama, true);
+}
 
 export const FOLDER = [
   "berita",
@@ -73,8 +93,23 @@ function namaAman(original: string): string {
 }
 
 export async function simpanFile(file: File, folder: Folder): Promise<string> {
-  const dir = path.join(STORAGE_DIR, folder);
   const nama = namaAman(file.name);
+
+  if (pakaiSupabase) {
+    const res = await fetch(urlObjek(folder, nama), {
+      method: "POST",
+      headers: { ...authSupabase(), "Content-Type": file.type || "application/octet-stream" },
+      body: Buffer.from(await file.arrayBuffer()),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Gagal mengunggah ke Supabase Storage: ${res.status} ${await res.text()}`);
+    }
+
+    return nama;
+  }
+
+  const dir = path.join(STORAGE_DIR, folder);
 
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, nama), Buffer.from(await file.arrayBuffer()));
@@ -84,6 +119,11 @@ export async function simpanFile(file: File, folder: Folder): Promise<string> {
 
 export async function hapusFile(folder: Folder, nama: string | null | undefined) {
   if (!nama || nama.includes("/") || nama.includes("\\")) {
+    return;
+  }
+
+  if (pakaiSupabase) {
+    await fetch(urlObjek(folder, nama), { method: "DELETE", headers: authSupabase() });
     return;
   }
 
