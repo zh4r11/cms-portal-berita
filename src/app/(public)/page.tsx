@@ -62,17 +62,37 @@ export default async function BerandaPage() {
           </article>
 
           {samping.length > 0 && (
+            // Berita pertama di kolom samping berfoto besar agar kolom ini seimbang dengan berita utama;
+            // sisanya memakai foto kecil supaya tingginya tidak melebihi kolom kiri.
             <ul className="grid content-start divide-y">
-              {samping.map((b) => (
-                <li key={b.id} className="space-y-1 py-3 first:pt-0">
-                  <Meta berita={b} />
-                  <h3 className="font-serif text-lg leading-snug font-semibold">
-                    <Link href={`/berita/${b.slug}`} className="hover:underline">
-                      {b.judul}
-                    </Link>
-                  </h3>
-                </li>
-              ))}
+              {samping.map((b, i) => {
+                const foto = mediaUrl("berita", b.gambar);
+                return (
+                  <li key={b.id} className="py-4 first:pt-0 last:pb-0">
+                    <article className={i === 0 ? "space-y-2" : "grid grid-cols-[1fr_6rem] items-start gap-3"}>
+                      {foto && (
+                        <Link href={`/berita/${b.slug}`} tabIndex={-1} aria-hidden className={i === 0 ? "block" : "order-last"}>
+                          <Image
+                            src={foto}
+                            alt=""
+                            width={i === 0 ? 640 : 192}
+                            height={i === 0 ? 360 : 144}
+                            className={i === 0 ? "aspect-video w-full rounded-sm object-cover" : "aspect-[4/3] w-full rounded-sm object-cover"}
+                          />
+                        </Link>
+                      )}
+                      <div className="min-w-0 space-y-1">
+                        <Meta berita={b} />
+                        <h3 className={i === 0 ? "font-serif text-xl leading-snug font-bold" : "font-serif text-base leading-snug font-semibold"}>
+                          <Link href={`/berita/${b.slug}`} className="hover:underline">
+                            {b.judul}
+                          </Link>
+                        </h3>
+                      </div>
+                    </article>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

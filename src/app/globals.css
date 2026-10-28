@@ -47,6 +47,13 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-sekilas: sekilas 45s linear infinite;
+
+  @keyframes sekilas {
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 /* --tema diisi dari template aktif (lihat src/app/layout.tsx); ini nilai Merah. */

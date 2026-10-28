@@ -12,6 +12,10 @@ import { mediaUrl } from "@/lib/media";
 import { getMenu, getTampilan } from "@/lib/portal";
 import { prisma } from "@/lib/prisma";
 import { getIdentitas } from "@/lib/site";
+import { cn } from "@/lib/utils";
+
+/** Pita (garis, latar) membentang selebar layar; isinya dibatasi lebar ini agar baris teks tetap nyaman dibaca. */
+const LEBAR = "mx-auto w-full max-w-7xl px-4";
 
 export default async function PublicLayout({ children }: LayoutProps<"/">) {
   const [identitas, menu, tampilan, halaman] = await Promise.all([
@@ -20,11 +24,10 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
     getTampilan(),
     prisma.halamanStatis.findMany({ orderBy: { judul: "asc" }, select: { judul: true, slug: true }, take: 8 }),
   ]);
-  const { logo, background, header, iklanAtas, sekilas, alamat } = tampilan;
-  const bg = mediaUrl("background", background?.gambar);
+  const { logo, header, iklanAtas, sekilas, alamat } = tampilan;
 
   return (
-    <div className="flex min-h-svh flex-col bg-muted/40 bg-cover bg-fixed bg-center" style={bg ? { backgroundImage: `url(${bg})` } : undefined}>
+    <div className="flex min-h-svh flex-col">
       <CatatKunjungan />
       <a
         href="#isi"
@@ -33,20 +36,26 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
         Langsung ke isi
       </a>
 
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col bg-background shadow-sm">
-        <div className="flex items-center justify-between gap-2 border-b px-4 py-1 text-xs text-muted-foreground">
-          <span>{formatTanggal(hariIni())}</span>
-          <div className="flex items-center gap-1">
-            <a href="/rss.xml" className="inline-flex h-8 items-center gap-1 rounded-sm px-2 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring">
-              <Rss className="size-3.5" />
-              RSS
-            </a>
-            <ThemeToggle />
+      <div className="flex flex-1 flex-col">
+        <div className="border-b">
+          <div className={cn(LEBAR, "flex items-center justify-between gap-2 py-1 text-xs text-muted-foreground")}>
+            <span>{formatTanggal(hariIni())}</span>
+            <div className="flex items-center gap-1">
+              <a href="/rss.xml" className="inline-flex h-8 items-center gap-1 rounded-sm px-2 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring">
+                <Rss className="size-3.5" />
+                RSS
+              </a>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
 
-        <header className="grid gap-4 px-4 py-5 md:grid-cols-[auto_1fr] md:items-center">
-          <Link href="/" className="w-fit rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring">
+        <header className={cn(LEBAR, "grid gap-4 py-5 md:grid-cols-[auto_1fr] md:items-center")}>
+          <Link
+            href="/"
+            // Logo unggahan umumnya berlatar putih; di mode gelap diberi pelat putih agar tidak tampak seperti kotak tempelan.
+            className={cn("w-fit rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring", logo && "dark:bg-white dark:px-3 dark:py-2")}
+          >
             {logo ? (
               <Image
                 src={mediaUrl("logo", logo.gambar)!}
@@ -66,33 +75,43 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
         </header>
 
         {header && (
-          <Iklan url={header.url} judul={header.judul} src={mediaUrl("header", header.gambar)!} width={1200} height={200} className="px-4" />
+          <Iklan url={header.url} judul={header.judul} src={mediaUrl("header", header.gambar)!} width={1200} height={200} className={LEBAR} />
         )}
 
-        <div className="sticky top-0 z-30 border-y-2 border-y-primary/80 bg-background/95 px-2 backdrop-blur supports-backdrop-filter:bg-background/85">
-          <PortalNav menu={menu} />
+        <div className="sticky top-0 z-30 border-y-2 border-y-primary/80 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
+          <div className="mx-auto w-full max-w-7xl px-2">
+            <PortalNav menu={menu} />
+          </div>
         </div>
 
         {sekilas.length > 0 && (
-          <section aria-label="Sekilas info" className="flex gap-3 border-b px-4 py-2 text-sm">
-            <span className="shrink-0 font-semibold text-primary">Sekilas</span>
-            <ul className="grid min-w-0 gap-1">
-              {sekilas.map((s) => (
-                // Di ponsel cukup satu info agar berita pertama tidak terdorong jauh ke bawah.
-                <li key={s.id} className="text-muted-foreground max-sm:not-first:hidden">
-                  {s.info}
-                </li>
-              ))}
-            </ul>
+          // Satu baris berjalan agar berita pertama tidak terdorong ke bawah; daftar digandakan supaya putarannya menyambung.
+          <section aria-label="Sekilas info" className="border-b text-sm">
+            <div className={cn(LEBAR, "flex items-center px-0 sm:px-4")}>
+              <span className="shrink-0 self-stretch bg-primary px-4 py-2 font-semibold text-primary-foreground">Sekilas</span>
+              <div className="group min-w-0 flex-1 overflow-hidden motion-reduce:overflow-x-auto">
+                <div className="flex w-max animate-sekilas group-hover:[animation-play-state:paused] motion-reduce:animate-none">
+                  {[0, 1].map((salinan) => (
+                    <ul key={salinan} aria-hidden={salinan === 1 || undefined} className={cn("flex shrink-0", salinan === 1 && "motion-reduce:hidden")}>
+                      {sekilas.map((s) => (
+                        <li key={s.id} className="py-2 pl-6 whitespace-nowrap text-muted-foreground before:mr-6 before:text-primary before:content-['•']">
+                          {s.info}
+                        </li>
+                      ))}
+                    </ul>
+                  ))}
+                </div>
+              </div>
+            </div>
           </section>
         )}
 
-        <main id="isi" className="flex-1 px-4 py-6">
+        <main id="isi" className={cn(LEBAR, "flex-1 py-6")}>
           {children}
         </main>
 
-        <footer className="border-t-2 border-t-primary/80 px-4 py-8 text-sm">
-          <div className="grid gap-8 md:grid-cols-[2fr_1fr]">
+        <footer className="border-t-2 border-t-primary/80 bg-muted/40 py-8 text-sm">
+          <div className={cn(LEBAR, "grid gap-8 md:grid-cols-[2fr_1fr]")}>
             <div className="space-y-3">
               <p className="font-serif text-xl font-semibold">{identitas.namaWebsite}</p>
               {alamat && (
