@@ -25,7 +25,9 @@ export default async function KategoriPage({ params, searchParams }: PageProps<"
 
   return (
     <DenganSidebar>
-      <JudulBagian as="h1">{kategori.nama}</JudulBagian>
+      <JudulBagian as="h1" warna={kategori.warna}>
+        {kategori.nama}
+      </JudulBagian>
       <DaftarBerita where={{ kategoriId: kategori.id }} page={parsePage(page)} kosong={`Belum ada berita di rubrik ${kategori.nama}.`} />
     </DenganSidebar>
   );

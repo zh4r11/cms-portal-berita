@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { gayaKategori } from "@/lib/cms";
 import { ringkas } from "@/lib/content";
 import { formatTanggal } from "@/lib/format";
 import { mediaUrl } from "@/lib/media";
@@ -42,7 +43,11 @@ export function Meta({ berita }: { berita: Pick<KartuBerita, "kategori" | "publi
     <p className="text-xs text-muted-foreground">
       {berita.kategori && (
         <>
-          <Link href={`/kategori/${berita.kategori.slug}`} className="font-semibold text-primary uppercase hover:underline">
+          <Link
+            href={`/kategori/${berita.kategori.slug}`}
+            className="kat font-semibold text-(--kat) uppercase hover:underline"
+            style={gayaKategori(berita.kategori.warna)}
+          >
             {berita.kategori.nama}
           </Link>
           {" · "}

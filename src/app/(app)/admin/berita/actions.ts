@@ -94,7 +94,9 @@ async function simpan(id: number | null, input: unknown): Promise<ActionResult> 
 
   try {
     if (id) {
-      await prisma.berita.update({ where: { id }, data: values });
+      // Hanya suntingan berita yang sudah tayang yang ditandai "Diperbarui" di portal.
+      const sudahTayang = lama!.aktif && lama!.publishedAt <= new Date();
+      await prisma.berita.update({ where: { id }, data: { ...values, ...(sudahTayang && { diubahAt: new Date() }) } });
     } else {
       await prisma.berita.create({ data: { ...values, authorId: user.id } });
     }

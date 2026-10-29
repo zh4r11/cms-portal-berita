@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { fieldErrors, isUniqueViolation, success, zodErrors, type ActionResult } from "@/lib/action";
 import { slugify } from "@/lib/content";
+import { WARNA_KATEGORI_KEYS } from "@/lib/cms";
 import { prisma } from "@/lib/prisma";
 import { requireModul } from "@/lib/session";
 import { teks } from "@/lib/validation";
@@ -11,6 +12,7 @@ import { teks } from "@/lib/validation";
 const schema = z.object({
   nama: teks("Nama kategori", 50),
   slug: z.string().trim().max(100).optional().default(""),
+  warna: z.enum(WARNA_KATEGORI_KEYS).nullable().default(null),
   aktif: z.boolean().default(true),
 });
 
@@ -22,14 +24,14 @@ async function simpan(id: number | null, input: unknown, pesan: string): Promise
     return zodErrors(parsed.error);
   }
 
-  const { nama, aktif } = parsed.data;
+  const { nama, warna, aktif } = parsed.data;
   const slug = slugify(parsed.data.slug || nama);
 
   try {
     if (id) {
-      await prisma.kategori.update({ where: { id }, data: { nama, slug, aktif } });
+      await prisma.kategori.update({ where: { id }, data: { nama, slug, warna, aktif } });
     } else {
-      await prisma.kategori.create({ data: { nama, slug, aktif, authorId: user.id } });
+      await prisma.kategori.create({ data: { nama, slug, warna, aktif, authorId: user.id } });
     }
   } catch (error) {
     if (isUniqueViolation(error, "slug")) {

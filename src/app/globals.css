@@ -143,6 +143,16 @@
   }
 }
 
+/* Warna rubrik; nilainya diisi gayaKategori() di src/lib/cms.ts. */
+@layer base {
+  .kat {
+    --kat: var(--kat-light, var(--primary));
+  }
+  .dark .kat {
+    --kat: var(--kat-dark, var(--primary));
+  }
+}
+
 @media print {
   @page {
     size: A4 landscape;
@@ -172,15 +182,16 @@
  * typography supaya ukuran huruf mengikuti token di atas.
  */
 @layer components {
+  /* Ukuran dan jarak baris mengikuti situs longform (The Atlantic, NYT): sekitar 19px, 1.7. */
   .isi-artikel {
-    @apply font-serif text-[1.0625rem] leading-relaxed text-foreground;
+    @apply font-serif text-[1.125rem] leading-[1.7] text-pretty text-foreground sm:text-[1.1875rem];
   }
   .isi-artikel > * + * {
-    @apply mt-4;
+    @apply mt-5;
   }
   .isi-artikel h1,
   .isi-artikel h2 {
-    @apply mt-8 text-xl font-semibold;
+    @apply mt-10 text-2xl leading-snug font-bold;
   }
   .isi-artikel h3,
   .isi-artikel h4 {
@@ -196,7 +207,7 @@
     @apply list-decimal pl-6;
   }
   .isi-artikel blockquote {
-    @apply border-l-2 pl-4 text-muted-foreground italic;
+    @apply border-l-4 border-primary pl-5 text-xl leading-snug text-muted-foreground italic;
   }
   .isi-artikel img {
     @apply h-auto max-w-full rounded-md;

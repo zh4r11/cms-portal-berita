@@ -5,6 +5,7 @@ import { DenganSidebar } from "@/components/portal/dengan-sidebar";
 import { Iklan } from "@/components/portal/iklan";
 import { JudulBagian } from "@/components/portal/judul-bagian";
 import { ringkas } from "@/lib/content";
+import { formatTanggal } from "@/lib/format";
 import { mediaUrl } from "@/lib/media";
 import { beritaTerbit, kartuBerita } from "@/lib/portal";
 import { prisma } from "@/lib/prisma";
@@ -16,9 +17,23 @@ export default async function BerandaPage() {
     prisma.iklanTengah.findFirst({ orderBy: { createdAt: "desc" } }),
   ]);
   const tampil = headline.map((b) => b.id);
-  const [terbaru, pilihan] = await Promise.all([
+  const [terbaru, pilihan, rubrik] = await Promise.all([
     prisma.berita.findMany({ where: { AND: [where, { id: { notIn: tampil } }] }, orderBy: { publishedAt: "desc" }, take: 10, select: kartuBerita }),
     prisma.berita.findMany({ where: { AND: [where, { utama: true }] }, orderBy: { publishedAt: "desc" }, take: 4, select: kartuBerita }),
+    // Blok per rubrik seperti halaman depan The Guardian, rubrik terbesar lebih dulu. Kategori nonaktif
+    // tetap ikut: "aktif" hanya menentukan bisa dipilih saat menulis, bukan tampil di portal.
+    prisma.kategori.findMany({
+      where: { berita: { some: where } },
+      orderBy: [{ berita: { _count: "desc" } }, { nama: "asc" }],
+      take: 6,
+      select: {
+        id: true,
+        nama: true,
+        slug: true,
+        warna: true,
+        berita: { where: { AND: [where, { id: { notIn: tampil } }] }, orderBy: { publishedAt: "desc" }, take: 4, select: kartuBerita },
+      },
+    }),
   ]);
   const [utama, ...samping] = headline;
 
@@ -123,7 +138,7 @@ export default async function BerandaPage() {
       </section>
 
       {pilihan.length > 0 && (
-        <section aria-labelledby="pilihan">
+        <section aria-labelledby="pilihan" className="mb-10">
           <JudulBagian id="pilihan">Pilihan Redaksi</JudulBagian>
           <ul className="grid gap-6 sm:grid-cols-2">
             {pilihan.map((b) => (
@@ -144,6 +159,51 @@ export default async function BerandaPage() {
           </ul>
         </section>
       )}
+
+      {rubrik
+        .filter((k) => k.berita.length > 0)
+        .map((k) => {
+          const [pertama, ...lain] = k.berita;
+          const foto = mediaUrl("berita", pertama.gambar);
+          return (
+            <section key={k.id} aria-labelledby={`rubrik-${k.slug}`} className="mb-10 last:mb-0">
+              <JudulBagian id={`rubrik-${k.slug}`} href={`/kategori/${k.slug}`} hrefLabel={`Semua ${k.nama}`} warna={k.warna}>
+                {k.nama}
+              </JudulBagian>
+              <div className="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                <article className="space-y-2">
+                  {foto && (
+                    <Link href={`/berita/${pertama.slug}`} tabIndex={-1} aria-hidden className="block">
+                      <Image src={foto} alt="" width={640} height={400} className="aspect-[16/10] w-full rounded-sm object-cover" />
+                    </Link>
+                  )}
+                  <h3 className="font-serif text-xl leading-snug font-bold text-balance">
+                    <Link href={`/berita/${pertama.slug}`} className="hover:underline">
+                      {pertama.judul}
+                    </Link>
+                  </h3>
+                  <p className="line-clamp-3 text-sm text-muted-foreground">{pertama.subJudul ?? ringkas(pertama.isi, 200)}</p>
+                </article>
+                {lain.length > 0 && (
+                  <ul className="grid content-start divide-y">
+                    {lain.map((b) => (
+                      <li key={b.id} className="py-3 first:pt-0 last:pb-0">
+                        <h3 className="font-serif leading-snug font-semibold">
+                          <Link href={`/berita/${b.slug}`} className="hover:underline">
+                            {b.judul}
+                          </Link>
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          <time dateTime={b.publishedAt.toISOString()}>{formatTanggal(b.publishedAt)}</time>
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          );
+        })}
     </DenganSidebar>
   );
 }

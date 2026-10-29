@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TEMA } from "@/lib/cms";
 import { getIdentitas, getTema } from "@/lib/site";
 import { mediaUrl } from "@/lib/media";
+import { getOrigin } from "@/lib/url";
 import "./globals.css";
 
 // Keluarga Source dirancang untuk bacaan panjang di layar: serif untuk judul
@@ -16,10 +17,12 @@ const serif = Source_Serif_4({ variable: "--font-serif", subsets: ["latin"] });
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
-  const identitas = await getIdentitas();
+  const [identitas, origin] = await Promise.all([getIdentitas(), getOrigin()]);
   const favicon = mediaUrl("favicon", identitas.favicon);
 
   return {
+    // Dasar tautan relatif di canonical, Open Graph, dan Twitter card.
+    metadataBase: new URL(origin),
     title: { default: identitas.namaWebsite, template: `%s - ${identitas.namaWebsite}` },
     description: identitas.metaDeskripsi ?? undefined,
     keywords: identitas.metaKeyword ?? undefined,

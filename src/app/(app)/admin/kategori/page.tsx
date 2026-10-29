@@ -10,7 +10,7 @@ export default async function KategoriPage() {
   await requireModul("kategori");
   const kategori = await prisma.kategori.findMany({
     orderBy: { nama: "asc" },
-    select: { id: true, nama: true, slug: true, aktif: true, _count: { select: { berita: true } } },
+    select: { id: true, nama: true, slug: true, warna: true, aktif: true, _count: { select: { berita: true } } },
   });
 
   return (

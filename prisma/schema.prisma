@@ -36,6 +36,8 @@ model Kategori {
   id        Int      @id @default(autoincrement())
   nama      String   @db.VarChar(50)
   slug      String   @unique @db.VarChar(100)
+  /// Kunci palet WARNA_KATEGORI; kosong = warna template
+  warna     String?  @db.VarChar(20)
   aktif     Boolean  @default(true)
   authorId  String?  @map("author_id")
   createdAt DateTime @default(now()) @map("created_at")
@@ -67,6 +69,8 @@ model Berita {
   keteranganGambar String?  @map("keterangan_gambar")
   dibaca           Int      @default(0)
   publishedAt      DateTime @default(now()) @map("published_at")
+  /// Terakhir diedit redaksi setelah terbit; updatedAt juga berubah karena hal lain
+  diubahAt         DateTime? @map("diubah_at")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

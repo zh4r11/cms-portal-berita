@@ -73,6 +73,13 @@ export function ringkas(html: string, panjang = 180): string {
   return `${teks.slice(0, teks.lastIndexOf(" ", panjang) || panjang)}...`;
 }
 
+/** Perkiraan menit baca isi berita, dengan kecepatan baca sekitar 200 kata per menit. */
+export function waktuBaca(html: string): number {
+  const kata = ringkas(html, Infinity).split(" ").filter(Boolean).length;
+
+  return Math.max(1, Math.round(kata / 200));
+}
+
 /** Sensor kata pada komentar pembaca (tabel katajelek), tanpa peduli huruf besar/kecil. */
 export function sensor(teks: string, daftar: { kata: string; ganti: string }[]): string {
   return daftar.reduce((hasil, { kata, ganti }) => {

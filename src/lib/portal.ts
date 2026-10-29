@@ -18,7 +18,7 @@ export const kartuBerita = {
   isi: true,
   publishedAt: true,
   dibaca: true,
-  kategori: { select: { nama: true, slug: true } },
+  kategori: { select: { nama: true, slug: true, warna: true } },
 } satisfies Prisma.BeritaSelect;
 
 export type KartuBerita = Prisma.BeritaGetPayload<{ select: typeof kartuBerita }>;
